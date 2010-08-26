@@ -59,3 +59,33 @@ preparedStatement.execute([10,11,12],function(err,rows,result) {
 	}
 	sys.puts("Simple prepared query results: "+sys.inspect(rows)+", "+result);
 });
+
+//LISTEN & NOTIFY
+client.simpleQuery("LISTEN seashell;",function(err,rows,result) {
+	if (err) {
+		sys.puts("Unable to LISTEN");
+	} else {
+		//Not sending a payload as only Postgres 9.0+ support it.
+		client.simpleQuery("NOTIFY seashell;",function(err,rows,result) {
+			if (err) {
+				sys.puts("Can't NOTIFY");
+			} else {
+				sys.puts("We should get a notification")
+			}
+		});
+	}
+});
+
+client.on("notification",function(processid,name,payload) {
+	sys.puts("Got a notification!");
+	sys.puts("\tname: "+name);
+	sys.puts("\tpayload: "+payload);
+});
+
+client.on("notice",function(notice) {
+	sys.puts("Got a notice:");
+	sys.puts(sys.inspect(notice));
+	//Example:
+	//  {"Message":"Hello world","Severity":"NOTICE"}
+	//See http://developer.postgresql.org/pgdocs/postgres/protocol-error-fields.html for all fields
+});
