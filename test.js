@@ -89,3 +89,44 @@ client.on("notice",function(notice) {
 	//  {"Message":"Hello world","Severity":"NOTICE"}
 	//See http://developer.postgresql.org/pgdocs/postgres/protocol-error-fields.html for all fields
 });
+
+//CREATE/DELETE/INSERT/DROP support
+client.simpleQuery("CREATE TABLE testtable (first int4, second int4);",function(err,rows,result) {
+	if (err) {
+		sys.puts("CREATE TABLE Error: "+err);
+		return;
+	}
+	sys.puts("CREATE TABLE Callback Arguments:");
+	sys.puts("\trows: "+sys.inspect(rows));
+	sys.puts("\tresult: "+sys.inspect(result));
+	client.simpleQuery("INSERT INTO testtable (first,second) VALUES(1,2);INSERT INTO testtable (first,second) VALUES (3,4),(5,6);",function(err,rows1,result1,rows2,result2) {
+		if (err) {
+			sys.puts("INSERT INTO Error: "+err);
+			return;
+		}
+		sys.puts("INSERT INTO Callback Arguments:");
+		sys.puts("\trows1: "+sys.inspect(rows1));
+		sys.puts("\tresult1: "+sys.inspect(result1));
+		sys.puts("\trows2: "+sys.inspect(rows2));
+		sys.puts("\tresult2: "+sys.inspect(result2));
+		
+		client.simpleQuery("SELECT * FROM testtable;",function(err,rows,result) {
+			if (err) {
+				sys.puts("SELECT Error: "+err);
+				return;
+			}
+			sys.puts("SELECT Callback Arguments:");
+			sys.puts("\trows: "+sys.inspect(rows));
+			sys.puts("\tresult: "+sys.inspect(result));
+			client.simpleQuery("DROP TABLE testtable;",function(err,rows,result) {
+				if (err) {
+					sys.puts("DROP TABLE Error: "+err);
+					return;
+				}
+				sys.puts("DROP TABLE Callback Arguments:");
+				sys.puts("\trows: "+sys.inspect(rows));
+				sys.puts("\tresult: "+sys.inspect(result));
+			});
+		});
+	});
+});
