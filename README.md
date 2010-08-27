@@ -11,12 +11,13 @@ node-PostgresClient depends on the following modules
 * LISTEN/NOTIFY
 * COPY ... FROM STDIN, COPY ... TO STDOUT
 * Transactions
+
 ## Multiple queries
 Although multiple queries of the form:
 
 	"SELECT 1; SELECT 2; SELECT 3;"
 
-are supported in simpleQuery, it is highly discouraged.
+are supported in simpleQuery, it is _highly_ discouraged.
 If one of the queries fails, all results from that command will be discarded.
 ## Creating a new client
 
@@ -129,7 +130,9 @@ For a COPY TO operation, simply implement the copyOut, copyData, or copyDone cal
 ### COPY ... FROM STDIN
 For a COPY FROM operation, you _must_ implement a copyIn callback.
 Because special care must be taken with CopyIn commands to not send anything else until the command is done, you have to tell the client that a CopyIn is expected by specifying a copyIn callback.
-If you're not sure if a query contains COPY ... FROM STDIN (for example when the query comes from user input), you should still implement the copyIn callback, and call stream.fail("Not prepared"); if you're not prepared to handle the COPY command.
+
+If you're not sure if a query contains COPY ... FROM STDIN (for example when the query comes from user input), you should _always_ implement the copyIn callback, and call stream.fail("Not prepared"); if you're not prepared to handle the COPY command.
+
 If you do a COPY ... FROM STDIN command without specifying a copyIn callback, the client will automatically disconnect to prevent any desynchronization of the protocol.
 ## Transactions
 Sometimes you need to make sure a bunch of queries are executed without interruptions.
