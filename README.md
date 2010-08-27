@@ -12,7 +12,7 @@ node-PostgresClient depends on the following modules:
 * Prepared statements
 * LISTEN/NOTIFY
 * COPY ... FROM STDIN, COPY ... TO STDOUT
-* Transactions
+* Blocks (Transactions)
 
 ## Multiple queries
 Although multiple queries of the form:
@@ -136,28 +136,28 @@ Because special care must be taken with CopyIn commands to not send anything els
 If you're not sure if a query contains COPY ... FROM STDIN (for example when the query comes from user input), you should _always_ implement the copyIn callback, and call stream.fail("Not prepared"); if you're not prepared to handle the COPY command.
 
 If you do a COPY ... FROM STDIN command without specifying a copyIn callback, the client will automatically disconnect to prevent any desynchronization of the protocol.
-## Transactions
+## Blocks (Transactions)
 Sometimes you need to make sure a bunch of queries are executed without interruptions.
 Normally this can be achieved by simply doing the queries in succession, but due to the asynchronous evented nature of Node.js, this is not always possible.
-This is why node-PostgresClient has transactions. A transaction is a promise that between the start and end of the transaction, _only_ queries belonging to that transaction will be executed.
-Please note that you should always make sure a transaction is properly ended. If you don't, queries will be paused forever, and the database will be unusable.
-For an example of this, see transactiontest.js
-## Starting
+This is why node-PostgresClient has blocks. A block is a promise that between the start and end of the block, _only_ queries belonging to that transaction will be executed.
+Please note that you should always make sure a block is properly ended. If you don't, queries will be paused forever, and the database will be unusable.
+For an example of this, see blocktest.js
+### Starting
 
-	tr=db.startTransaction();
+	bl=db.startBlock();
 
-## Ending
+### Ending
 
-	tr=db.endTransaction();
+	db.endBlock(bl);
 
-## Sending
+### Sending
 
-	db.simpleQuery("SELECT 1;",tr,callback);
-	db.extendedQuery("SELECT $1::int;",[1],tr,callback);
-	db.bindExecute(statement,[1],tr,callback);
-	db.prepare("SELECT $1::int;").execute([1],tr,callback);
-## Sub transactions
-Transactions can also be part of other transactions. e.g. the following workflow:
+	db.simpleQuery("SELECT 1;",bl,callback);
+	db.extendedQuery("SELECT $1::int;",[1],bl,callback);
+	db.bindExecute(statement,[1],bl,callback);
+	db.prepare("SELECT $1::int;").execute([1],bl,callback);
+### Sub blocks
+Blocks can also be part of other blocks. e.g. the following workflow:
 
 	open transaction 1
 	send Q6 without a transaction
@@ -176,7 +176,55 @@ Will result in the following order of queries being executed:
 	
 You can open a subtransaction like this:
 
-	var subtransaction=db.startTransaction(parenttransaction);
+	var subblock=db.startBlock(parentblock);
+
+### Transactions
+An example of a transaction and proper error handling would look like this:
+
+	var block=db.startBlock();
+	db.simpleQuery("BEGIN TRANSACTION;",block,function(err,rows,result) {
+		if (err) {
+			sys.puts("BEGIN failed");
+			db.endBlock(block);
+			return;
+		}
+		db.simpleQuery("UPDATE table SET x=x+1 WHERE y=0;",block,function(err,rows,result) {
+			if (err) {
+				sys.puts("UPDATE(1) failed");
+				db.simpleQuery("ROLLBACK TRANSACTION;",block,function(){});
+				db.endBlock(block);
+				return;
+			}
+			db.simpleQuery("UPDATE table SET z=z+1 WHERE z=1;",block,function(err,rows,result) {
+				if (err) {
+					sys.puts("UPDATE(2) failed");
+					db.simpleQuery("ROLLBACK TRANSACTION;",block,function(){});
+					db.endBlock(block);
+					return;
+				} else {
+					db.simpleQuery("COMMIT TRANSACTION;",block,function(err,rows,result) {
+						if (err) {
+							sus.puts("COMMIT failed");
+							db.simpleQuery("ROLLBACK TRANSACTION;",block,function() {});
+							db.endBlock(block);
+						} else {
+							sys.puts("Committed");
+							db.endBlock(block);
+						}
+					}
+				}
+			});
+		});
+	});
+
+This example will do:
+
+	BEGIN TRANSACTION;
+	UPDATE table SET x=x+1 WHERE y=0;
+	UPDATE table SET z=z+1 WHERE x=1;
+	COMMIT;
+
+While making sure that no other queries will be interspersed with it by using a block, as well as doing a ROLLBACK if any command goes wrong.
 
 ## Query callbacks
 A callback can be a simple function, in which case it should be of the form:

@@ -14,12 +14,12 @@ client.on("end",function() {
 	sys.puts("End");
 });
 
-var tr=client.startTransaction();
+var bl=client.startBlock();
 
 
 setTimeout(function() {
 	sys.puts("GO!");
-	client.endTransaction(tr);
+	client.endBlock(bl);
 },1000);
 
 client.simpleQuery("CREATE TABLE testtable (first int4, second int4);",function(err,rows,result) {
@@ -41,33 +41,49 @@ client.simpleQuery("CREATE TABLE testtable (first int4, second int4);",function(
 		sys.puts("\trows2: "+sys.inspect(rows2));
 		sys.puts("\tresult2: "+sys.inspect(result2));
 		
-		client.simpleQuery("COPY testtable TO STDOUT CSV HEADER QUOTE '\"' ESCAPE '\\\\';",{
-			copyout:function(format,columns) {
-				sys.puts("CopyOut: "+format);
-			},
-			copydata:function(data) {
-				sys.puts("CopyData: "+data.toString('utf8'));
-			},
-			copydone:function() {
-				sys.puts("Done");
+		client.simpleQuery("COPY testtable FROM STDIN DELIMITER '\t';",{
+			copyIn: function(handler) {
+				handler.write("10\t12\n");
+				handler.write("18\t20\n");
+				handler.end();
 			},
 			complete: function(err,rows,result) {
 				if (err) {
-					sys.puts("COPY Error: "+err);
+					sys.puts("COPY FROM Error: "+err);
 					return;
 				}
-				sys.puts("COPY Callback Arguments:");
+				sys.puts("COPY FROM Callback Arguments:");
 				sys.puts("\trows: "+sys.inspect(rows));
 				sys.puts("\tresult: "+sys.inspect(result));
-				client.simpleQuery("DROP TABLE testtable;",function(err,rows,result) {
+				client.simpleQuery("COPY testtable TO STDOUT DELIMITER '\t';",{
+				copyOut:function(format,columns) {
+					sys.puts("CopyOut: "+format);
+				},
+				copyData:function(data) {
+					sys.puts("CopyData: "+data.toString('utf8'));
+				},
+				copyDone:function() {
+					sys.puts("CopyDone");
+				},
+				complete: function(err,rows,result) {
 					if (err) {
-						sys.puts("DROP TABLE Error: "+err);
+						sys.puts("COPY Error: "+err);
 						return;
 					}
-					sys.puts("DROP TABLE Callback Arguments:");
+					sys.puts("COPY Callback Arguments:");
 					sys.puts("\trows: "+sys.inspect(rows));
 					sys.puts("\tresult: "+sys.inspect(result));
-				});
+					client.simpleQuery("DROP TABLE testtable;",function(err,rows,result) {
+						if (err) {
+							sys.puts("DROP TABLE Error: "+err);
+							return;
+						}
+						sys.puts("DROP TABLE Callback Arguments:");
+						sys.puts("\trows: "+sys.inspect(rows));
+						sys.puts("\tresult: "+sys.inspect(result));
+					});
+				}
+			});
 			}
 		});
 	});
