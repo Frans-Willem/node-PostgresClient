@@ -1,9 +1,11 @@
 # node-PostgresClient
 This module is an implementation of the PostgreSQL Frontend-Backend protocol using Node.js' net and event libraries.
 ## Dependencies
-node-PostgresClient depends on the following modules
+node-PostgresClient depends on the following modules:
+
 * [node-BufferLib](http://github.com/Frans-Willem/node-BufferLib) by [me](http://github.com/Frans-Willem/)
 * [node-strtok](http://github.com/pgriess/node-strtok) by [Peter Griess](http://github.com/pgriess)
+
 ## Features supported
 * Simple queries
 * Parametrized queries
