@@ -6,6 +6,38 @@ node-PostgresClient depends on the following modules:
 * [node-BufferLib](http://github.com/Frans-Willem/node-BufferLib) by [me](http://github.com/Frans-Willem/)
 * [node-strtok](http://github.com/pgriess/node-strtok) by [Peter Griess](http://github.com/pgriess)
 
+## Installing
+### From NPM
+On the shell:
+
+	npm install PostgresClient
+
+In your JS file
+
+	var PostgresClient=require("PostgresClient").PostgresClient;
+
+### Manually
+On the shell:
+
+	mkdir libraries
+	cd libraries
+	mkdir repos
+	cd repos
+	git clone git://github.com/Frans-Willem/node-PostgresClient.git
+	git clone git://github.com/Frans-Willem/node-BufferLib.git
+	git clone git://github.com/pgriess/node-strtok.git
+	cd ..
+	ln -s ./repos/node-BufferLib/lib bufferlib
+	echo "module.exports=require('./repos/node-PostgresClient/lib/PostgresClient');" > PostgresClient.js
+	echo "module.exports=require('./repos/node-strtok/lib/strtok');" > strtok.js
+	cd ..
+	
+
+In your JS file
+
+	require.paths.unshift(__dirname+"/libraries");
+	var PostgresClient=require("PostgresClient").PostgresClient;
+	
 ## Features supported
 * Simple queries
 * Parametrized queries
@@ -139,8 +171,8 @@ If you do a COPY ... FROM STDIN command without specifying a copyIn callback, th
 ## Blocks (Transactions)
 Sometimes you need to make sure a bunch of queries are executed without interruptions.
 Normally this can be achieved by simply doing the queries in succession, but due to the asynchronous evented nature of Node.js, this is not always possible.
-This is why node-PostgresClient has blocks. A block is a promise that between the start and end of the block, _only_ queries belonging to that transaction will be executed.
-Please note that you should always make sure a block is properly ended. If you don't, queries will be paused forever, and the database will be unusable.
+This is why node-PostgresClient has blocks. A block is a promise that between the start and end of the block, _only_ queries belonging to that block will be executed.
+Please note that you should always make sure a block is properly ended. If you don't, queries not part of that block will be paused forever, and the database will be unusable.
 For an example of this, see blocktest.js
 ### Starting
 
@@ -159,27 +191,27 @@ For an example of this, see blocktest.js
 ### Sub blocks
 Blocks can also be part of other blocks. e.g. the following workflow:
 
-	open transaction 1
-	send Q6 without a transaction
-	send Q1 to transaction 1
-	open transaction 1.1
-	send Q2 to transaction 1.1
-	send Q4 to transaction 1
-	send Q3 to transaction 1.1
-	end transaction 1.1
-	send Q5 to transaction 1
-	end transaction 1
+	open block 1
+	send Q6 without a block
+	send Q1 to block 1
+	open block 1.1
+	send Q2 to block 1.1
+	send Q4 to block 1
+	send Q3 to block 1.1
+	end block 1.1
+	send Q5 to block 1
+	end block 1
 
 Will result in the following order of queries being executed:
 
 	Q1,Q2,Q3,Q4,Q5,Q6
 	
-You can open a subtransaction like this:
+You can open a sub block like this:
 
 	var subblock=db.startBlock(parentblock);
 
 ### Transactions
-An example of a transaction and proper error handling would look like this:
+An example of a proper transaction using blocks would look like this:
 
 	var block=db.startBlock();
 	db.simpleQuery("BEGIN TRANSACTION;",block,function(err,rows,result) {
@@ -222,9 +254,9 @@ This example will do:
 	BEGIN TRANSACTION;
 	UPDATE table SET x=x+1 WHERE y=0;
 	UPDATE table SET z=z+1 WHERE x=1;
-	COMMIT;
+	COMMIT TRANSACTION;
 
-While making sure that no other queries will be interspersed with it by using a block, as well as doing a ROLLBACK if any command goes wrong.
+While making sure that no other queries will be interspersed with it by using a block, as well as doing a ROLLBACK TRANSACTION; if any command goes wrong.
 
 ## Query callbacks
 A callback can be a simple function, in which case it should be of the form:
