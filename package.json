@@ -1,7 +1,7 @@
 { "name": "PostgresClient",
   "version": "0.0.1",
   "description": "A PostgreSQL client library for Node.js",
-  "homepage": "http://github.com/Frans-Willem/node-PostgresClient.git",
+  "homepage": "https://github.com/Frans-Willem/node-PostgresClient",
   "engine": [ "node >=0.1.90" ],
   "author": "Frans-Willem Hardijzer <fw@hardijzer.nl>",
   "repository":
