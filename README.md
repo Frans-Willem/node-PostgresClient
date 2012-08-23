@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/Frans-Willem/node-PostgresClient.png)](http://travis-ci.org/Frans-Willem/node-PostgresClient)
 # node-PostgresClient
 This module is an implementation of the PostgreSQL Frontend-Backend protocol using Node.js' net and event libraries.
 ## Dependencies
